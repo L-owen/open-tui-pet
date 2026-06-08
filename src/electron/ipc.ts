@@ -8,6 +8,12 @@ export function setupIpc(mainWindow: BrowserWindow): void {
     if (mainWindow) mainWindow.close()
   })
 
+  ipcMain.on("window-move", (_event, data: { x: number; y: number }) => {
+    if (mainWindow) {
+      mainWindow.setBounds({ x: Math.round(data.x), y: Math.round(data.y) })
+    }
+  })
+
   ipcMain.on("permission-reply", (_event, data: { requestID: string; reply: string }) => {
     log(`[electron:ipc] Permission reply from renderer: ${data.requestID} → ${data.reply}`)
     if (process.send) {

@@ -3,6 +3,8 @@ import { contextBridge, ipcRenderer } from "electron"
 contextBridge.exposeInMainWorld("petApi", {
   closeWindow: () => ipcRenderer.send("window-close"),
 
+  dragWindow: (x: number, y: number) => ipcRenderer.send("window-move", { x, y }),
+
   onEvent: (callback: (event: any) => void) => {
     ipcRenderer.on("sse-event", (_event, data) => callback(data))
   },

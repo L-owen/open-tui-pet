@@ -22,7 +22,6 @@ body {
   gap: 6px;
   cursor: grab;
   user-select: none;
-  -webkit-app-region: drag;
   overflow: visible;
 }
 

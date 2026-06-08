@@ -4,6 +4,19 @@ import { createSpeechBubble } from './speech-bubble.js'
 import { createEventHandler, createSleepChecker } from './event-handler.js'
 import { createPermissionPopup } from './permission-popup.js'
 
+const DOUBLE_CLICK_MS = 300
+const LONG_PRESS_MS = 600
+const MOVE_THRESHOLD_PX = 5
+const CLICK_RETURN_MS = 3000
+
+const CUTE_MESSAGES = ['Hi! 👋', '别戳我~', '摸摸头~', 'Hello!', '嘿嘿~']
+const EXCITED_MESSAGES = ['Woo!', '太开心!', 'Yay!', '蹦蹦跳~', 'Yeah!']
+const EASTER_EGG_MESSAGES = ['你发现了秘密!', '长按大师!', '✨ Secret! ✨', '隐藏彩蛋~', 'Wow!']
+
+function randomMessage(pool) {
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
 function init() {
   const petSprite = document.getElementById('pet-sprite')
   const noPetMessage = document.getElementById('no-pet-message')
@@ -43,6 +56,108 @@ function init() {
   }, 3000)
 
   sleepChecker.start()
+
+  let tapTimer = null
+  let longPressTimer = null
+  let longPressFired = false
+  let mouseDownPos = null
+  let isDragging = false
+  let returnTimer = null
+
+  function triggerTapAction(anim, messages) {
+    const current = stateMachine.getCurrentState()
+    if (current === 'waving' || current === 'failed') return
+    player.play(anim)
+    speechBubble.showText(randomMessage(messages))
+    if (returnTimer) clearTimeout(returnTimer)
+    returnTimer = setTimeout(() => {
+      player.play(stateMachine.getPreviousState())
+      returnTimer = null
+    }, CLICK_RETURN_MS)
+  }
+
+  // Container-level drag (for dragging the window from non-interactive areas)
+  const petContainer = document.getElementById('pet-container')
+  petContainer.addEventListener('mousedown', (e) => {
+    // Skip if click is on interactive elements
+    if (e.target.closest('.pet-sprite, .permission-popup, .no-pet-message')) return
+
+    const startX = e.screenX
+    const startY = e.screenY
+    const startWinX = window.screenX
+    const startWinY = window.screenY
+
+    const onMove = (e) => {
+      window.petApi.dragWindow(startWinX + (e.screenX - startX), startWinY + (e.screenY - startY))
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  })
+
+  // Sprite-level interaction: tap (single/double/long-press) AND drag
+  petSprite.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return
+    longPressFired = false
+    isDragging = false
+    mouseDownPos = { x: e.clientX, y: e.clientY }
+    const startScreenX = e.screenX
+    const startScreenY = e.screenY
+    const startWinX = window.screenX
+    const startWinY = window.screenY
+
+    longPressTimer = setTimeout(() => {
+      longPressTimer = null
+      longPressFired = true
+      triggerTapAction('jumping', EASTER_EGG_MESSAGES)
+    }, LONG_PRESS_MS)
+
+    const onMouseMove = (e) => {
+      if (!mouseDownPos) return
+      const dx = e.clientX - mouseDownPos.x
+      const dy = e.clientY - mouseDownPos.y
+      if (Math.sqrt(dx * dx + dy * dy) > MOVE_THRESHOLD_PX) {
+        if (longPressTimer) {
+          clearTimeout(longPressTimer)
+          longPressTimer = null
+        }
+        if (!isDragging) {
+          isDragging = true
+        }
+        window.petApi.dragWindow(startWinX + (e.screenX - startScreenX), startWinY + (e.screenY - startScreenY))
+      }
+    }
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+
+      if (longPressTimer) {
+        clearTimeout(longPressTimer)
+        longPressTimer = null
+      }
+      if (!mouseDownPos) return
+      mouseDownPos = null
+      if (isDragging) return
+      if (longPressFired) { longPressFired = false; return }
+      if (tapTimer) {
+        clearTimeout(tapTimer)
+        tapTimer = null
+        triggerTapAction('jumping', EXCITED_MESSAGES)
+      } else {
+        tapTimer = setTimeout(() => {
+          tapTimer = null
+          triggerTapAction('waving', CUTE_MESSAGES)
+        }, DOUBLE_CLICK_MS)
+      }
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  })
 }
 
 if (document.readyState === 'loading') {

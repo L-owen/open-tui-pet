@@ -39,6 +39,10 @@ export const CONFIG_FILE = join(PET_DIR, "pet-config.json")
 export const WINDOW_WIDTH = 200
 export const WINDOW_HEIGHT = 280
 
+/** Standup window dimensions */
+export const STANDUP_WINDOW_WIDTH = 420
+export const STANDUP_WINDOW_HEIGHT = 520
+
 /** Window offset from screen edge */
 export const WINDOW_MARGIN = 20
 

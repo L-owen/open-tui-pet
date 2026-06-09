@@ -31,11 +31,14 @@ export function rebuildMenus(
   mainWindow: BrowserWindow | null,
   allPets: PetInfo[],
   selectedSlug: string,
+  onStandup?: () => void,
 ): void {
   const contextMenu = Menu.buildFromTemplate([
     { label: `Current: ${allPets.find(p => p.slug === selectedSlug)?.name ?? "None"}`, enabled: false },
     { type: "separator" },
     buildPetSubmenu(allPets, selectedSlug, switchPetCallback ?? (() => {})),
+    { type: "separator" },
+    { label: "Standup Summary", click: () => onStandup?.() },
     { type: "separator" },
     { label: "Show Pet", click: () => mainWindow?.show() },
     { label: "Hide Pet", click: () => mainWindow?.hide() },
@@ -51,13 +54,14 @@ export function createTray(
   allPets: PetInfo[],
   selectedSlug: string,
   onSwitchPet: (slug: string) => void,
+  onStandup?: () => void,
 ): Tray {
   switchPetCallback = onSwitchPet
 
   const icon = nativeImage.createFromDataURL(TRAY_ICON_DATA)
   const tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon)
 
-  rebuildMenus(tray, mainWindow, allPets, selectedSlug)
+  rebuildMenus(tray, mainWindow, allPets, selectedSlug, onStandup)
 
   tray.on("double-click", () => {
     if (mainWindow) {

@@ -1,13 +1,16 @@
-import { app, Menu } from "electron"
+import { app, Menu, BrowserWindow } from "electron"
 import type { Tray, MenuItemConstructorOptions } from "electron"
+import { readFileSync } from "fs"
 import { dirname, join } from "path"
 import { fileURLToPath } from "url"
 import { createWindow, getMainWindow } from "./window.js"
 import { createTray, rebuildMenus, buildPetSubmenu } from "./tray.js"
 import { setupIpc, listenForParentEvents, watchParent } from "./ipc.js"
 import { loadPetData } from "./pet-loader.js"
+import { readGitLog } from "./git-reader.js"
 import { saveConfig } from "../config.js"
 import { log } from "../logger.js"
+import { STANDUP_WINDOW_WIDTH, STANDUP_WINDOW_HEIGHT } from "../constants.js"
 import type { PetInfo } from "../types.js"
 
 app.disableHardwareAcceleration()
@@ -19,6 +22,45 @@ const ALL_PETS: PetInfo[] = (() => {
 let selectedSlug = process.env.PET_SELECTED ?? ""
 const PARENT_PID = process.env.PET_PARENT_PID ? parseInt(process.env.PET_PARENT_PID, 10) : null
 let tray: Tray | null = null
+let standupWindow: BrowserWindow | null = null
+
+async function openStandupWindow() {
+  if (standupWindow && !standupWindow.isDestroyed()) {
+    standupWindow.focus()
+    return
+  }
+
+  const cwd = process.env.PET_CWD || process.cwd()
+  const data = await readGitLog(cwd)
+
+  let html: string
+  try {
+    html = readFileSync(join(RENDERER_PATH, "standup.html"), "utf-8")
+  } catch (err: any) {
+    log(`[electron] Failed to read standup.html: ${err.message}`)
+    return
+  }
+
+  html = html.replace("{{DATA_PLACEHOLDER}}", JSON.stringify(data))
+
+  standupWindow = new BrowserWindow({
+    width: STANDUP_WINDOW_WIDTH,
+    height: STANDUP_WINDOW_HEIGHT,
+    title: `Standup Summary - ${data.date}`,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  })
+
+  standupWindow.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html))
+
+  standupWindow.on("closed", () => {
+    standupWindow = null
+  })
+
+  log("[electron] Standup window opened")
+}
 
 function sendPetData(slug: string) {
   const pet = ALL_PETS.find(p => p.slug === slug)
@@ -38,7 +80,7 @@ function switchPet(slug: string) {
   saveConfig({ selectedPet: slug })
   log(`[electron] Switched to pet: ${slug}`)
   sendPetData(slug)
-  if (tray) rebuildMenus(tray, getMainWindow(), ALL_PETS, selectedSlug)
+  if (tray) rebuildMenus(tray, getMainWindow(), ALL_PETS, selectedSlug, openStandupWindow)
 }
 
 app.whenReady().then(() => {
@@ -55,7 +97,7 @@ app.whenReady().then(() => {
     ]
     Menu.buildFromTemplate(template).popup({ window: mainWindow })
   })
-  tray = createTray(mainWindow, ALL_PETS, selectedSlug, switchPet)
+  tray = createTray(mainWindow, ALL_PETS, selectedSlug, switchPet, openStandupWindow)
   setupIpc(mainWindow)
   listenForParentEvents(mainWindow)
   watchParent(PARENT_PID)
@@ -66,7 +108,15 @@ app.whenReady().then(() => {
 })
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") { log("[electron] All windows closed, quitting"); app.quit() }
+  if (process.platform !== "darwin") {
+    const mainWin = getMainWindow()
+    if (mainWin && !mainWin.isDestroyed()) {
+      log("[electron] Standup window closed, pet still running")
+      return
+    }
+    log("[electron] All windows closed, quitting")
+    app.quit()
+  }
 })
 app.on("before-quit", () => {
   log("[electron] Before quit")

@@ -35,6 +35,7 @@ cp src/renderer/index.html \
    src/renderer/event-handler.js \
    src/renderer/permission-popup.js \
    src/renderer/time-aware.js \
+   src/renderer/standup.html \
    "$DIST/renderer/"
 
 if [ -d "pets" ]; then

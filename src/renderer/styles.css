@@ -30,6 +30,8 @@ body {
 }
 
 .pet-sprite {
+  position: relative;
+  left: 0;
   width: 72px;
   aspect-ratio: 192 / 208;
   image-rendering: pixelated;

@@ -34,6 +34,7 @@ cp src/renderer/index.html \
    src/renderer/speech-bubble.js \
    src/renderer/event-handler.js \
    src/renderer/permission-popup.js \
+   src/renderer/time-aware.js \
    "$DIST/renderer/"
 
 if [ -d "pets" ]; then

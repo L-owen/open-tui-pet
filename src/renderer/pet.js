@@ -3,6 +3,7 @@ import { createStateMachine } from './state-machine.js'
 import { createSpeechBubble } from './speech-bubble.js'
 import { createEventHandler, createSleepChecker } from './event-handler.js'
 import { createPermissionPopup } from './permission-popup.js'
+import { createTimeAwareEngine } from './time-aware.js'
 
 const DOUBLE_CLICK_MS = 300
 const LONG_PRESS_MS = 600
@@ -27,6 +28,7 @@ function init() {
   const eventHandler = createEventHandler(stateMachine, speechBubble)
   const sleepChecker = createSleepChecker(stateMachine, speechBubble, eventHandler)
   const permissionPopup = createPermissionPopup()
+  const timeAware = createTimeAwareEngine(stateMachine, speechBubble, player)
 
   window.petApi.onEvent((event) => {
     eventHandler.handleEvent(event)
@@ -42,6 +44,8 @@ function init() {
     petSprite.style.display = 'block'
     noPetMessage.style.display = 'none'
     player.play('idle')
+    timeAware.showGreeting()
+    timeAware.startPeriodicReminders()
   })
 
   window.petApi.onPermissionRequest((request) => {
@@ -56,6 +60,29 @@ function init() {
   }, 3000)
 
   sleepChecker.start()
+
+  const originalSetState = stateMachine.setState
+  stateMachine.setState = function(newState) {
+    originalSetState.call(this, newState)
+    if (stateMachine.getCurrentState() === 'idle') {
+      timeAware.startPeriodicReminders()
+    } else {
+      timeAware.stopPeriodicReminders()
+    }
+  }
+
+  // ── Interruption Handling ──
+  window.addEventListener('blur', () => {
+    timeAware.stopPeriodicReminders()
+  })
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      timeAware.stopPeriodicReminders()
+    } else if (stateMachine.getCurrentState() === 'idle') {
+      timeAware.startPeriodicReminders()
+    }
+  })
 
   let tapTimer = null
   let longPressTimer = null

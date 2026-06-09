@@ -4,51 +4,97 @@
   box-sizing: border-box;
 }
 
+html {
+  width: 100%;
+  height: 100%;
+}
+
+html.resizing {
+  cursor: nwse-resize !important;
+}
+
 body {
   background: transparent;
   overflow: hidden;
   font-family: system-ui, -apple-system, sans-serif;
+  pointer-events: none;
 }
 
 .pet-container {
   position: relative;
-  width: 200px;
-  height: 280px;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  padding-bottom: 20px;
-  gap: 6px;
-  cursor: grab;
+  padding-bottom: 10%;
+  gap: 4%;
   user-select: none;
   overflow: visible;
 }
 
-.pet-container:active {
-  cursor: grabbing;
+.resize-handle {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.resize-handle.near {
+  opacity: 0.6;
+}
+
+.resize-handle:hover {
+  opacity: 1 !important;
+}
+
+.resize-handle.dragging {
+  opacity: 1 !important;
+}
+
+.resize-handle svg {
+  filter:
+    drop-shadow(1px 0 0 rgba(255,255,255,0.6))
+    drop-shadow(-1px 0 0 rgba(255,255,255,0.6))
+    drop-shadow(0 1px 0 rgba(255,255,255,0.6))
+    drop-shadow(0 -1px 0 rgba(255,255,255,0.6));
 }
 
 .pet-sprite {
   position: relative;
   left: 0;
-  width: 72px;
+  width: 36%;
   aspect-ratio: 192 / 208;
   image-rendering: pixelated;
   background-repeat: no-repeat;
   background-size: 800% 900%;
   background-position: 0% 0%;
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.pet-sprite:active {
+  cursor: grabbing;
 }
 
 .speech-bubble {
   position: relative;
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 10px;
-  padding: 4px 10px 8px;
-  font-size: 11px;
+  border-radius: 0.6rem;
+  padding: 0.25rem 0.6rem 0.5rem;
+  font-size: 0.7rem;
   color: #111;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0.12rem 0.4rem rgba(0, 0, 0, 0.3);
   opacity: 0;
   transition: opacity 0.18s ease;
   pointer-events: none;
@@ -63,12 +109,12 @@ body {
 .speech-bubble::after {
   content: '';
   position: absolute;
-  bottom: -5px;
+  bottom: -0.3rem;
   left: 50%;
   transform: translateX(-50%);
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 5px solid rgba(255, 255, 255, 0.95);
+  border-left: 0.3rem solid transparent;
+  border-right: 0.3rem solid transparent;
+  border-top: 0.3rem solid rgba(255, 255, 255, 0.95);
 }
 
 .bubble-text {
@@ -78,15 +124,15 @@ body {
 .no-pet-message {
   text-align: center;
   color: #666;
-  font-size: 12px;
-  padding: 20px;
-  -webkit-app-region: no-drag;
+  font-size: 0.75rem;
+  padding: 1.25rem;
+  pointer-events: auto;
 }
 
 .no-pet-message .hint {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: #999;
-  margin-top: 8px;
+  margin-top: 0.5rem;
   font-family: ui-monospace, monospace;
 }
 
@@ -96,13 +142,13 @@ body {
 
 .permission-popup {
   position: absolute;
-  bottom: 110px;
+  bottom: 7rem;
   left: 50%;
   transform: translateX(-50%) scale(0.9);
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  width: 180px;
+  border-radius: 0.6rem;
+  box-shadow: 0 0.12rem 0.4rem rgba(0, 0, 0, 0.3);
+  width: 11.25rem;
   opacity: 0;
   pointer-events: none;
   transition:
@@ -124,14 +170,14 @@ body {
 
 .permission-tail {
   position: absolute;
-  bottom: -5px;
+  bottom: -0.3rem;
   left: 50%;
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 5px solid rgba(255, 255, 255, 0.95);
+  border-left: 0.3rem solid transparent;
+  border-right: 0.3rem solid transparent;
+  border-top: 0.3rem solid rgba(255, 255, 255, 0.95);
   background: none;
   z-index: 0;
 }
@@ -140,17 +186,17 @@ body {
 
 .permission-header {
   position: relative;
-  padding: 8px 10px 4px;
+  padding: 0.5rem 0.6rem 0.25rem;
   text-align: center;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 0.12rem;
 }
 
 .permission-title {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #111;
   line-height: 1.3;
@@ -158,7 +204,7 @@ body {
 
 .permission-subtitle {
   font-family: ui-monospace, monospace;
-  font-size: 9px;
+  font-size: 0.56rem;
   font-weight: 500;
   color: #888;
   letter-spacing: 0.02em;
@@ -168,8 +214,8 @@ body {
 
 .permission-body {
   position: relative;
-  padding: 2px 10px 6px;
-  font-size: 10px;
+  padding: 0.12rem 0.6rem 0.4rem;
+  font-size: 0.625rem;
   color: #555;
   line-height: 1.4;
   word-break: break-all;
@@ -180,7 +226,7 @@ body {
 .permission-body p {
   margin: 0;
   font-family: ui-monospace, monospace;
-  font-size: 9px;
+  font-size: 0.56rem;
   color: #666;
 }
 
@@ -188,8 +234,8 @@ body {
 
 .permission-actions {
   display: flex;
-  gap: 5px;
-  padding: 2px 8px 8px;
+  gap: 0.3rem;
+  padding: 0.12rem 0.5rem 0.5rem;
   justify-content: center;
   position: relative;
   z-index: 2;
@@ -197,10 +243,10 @@ body {
 
 .permission-btn {
   border: none;
-  border-radius: 6px;
-  padding: 4px 10px;
+  border-radius: 0.4rem;
+  padding: 0.25rem 0.6rem;
   font-family: system-ui, -apple-system, sans-serif;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 600;
   cursor: pointer;
   transition:
@@ -219,7 +265,7 @@ body {
 .permission-btn-allow {
   background: #4ade80;
   color: #14532d;
-  box-shadow: 0 1px 4px rgba(74, 222, 128, 0.3);
+  box-shadow: 0 0.06rem 0.25rem rgba(74, 222, 128, 0.3);
 }
 
 .permission-btn-allow:hover {
@@ -229,7 +275,7 @@ body {
 .permission-btn-always {
   background: #60a5fa;
   color: #1e3a5f;
-  box-shadow: 0 1px 4px rgba(96, 165, 250, 0.3);
+  box-shadow: 0 0.06rem 0.25rem rgba(96, 165, 250, 0.3);
 }
 
 .permission-btn-always:hover {
@@ -239,7 +285,7 @@ body {
 .permission-btn-deny {
   background: #f3f4f6;
   color: #6b7280;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0.06rem 0.2rem rgba(0, 0, 0, 0.06);
 }
 
 .permission-btn-deny:hover {

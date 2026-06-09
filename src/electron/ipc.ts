@@ -14,6 +14,29 @@ export function setupIpc(mainWindow: BrowserWindow): void {
     }
   })
 
+  ipcMain.on("window-resize", (_event, data: { width: number; height: number }) => {
+    if (mainWindow) {
+      mainWindow.setBounds({
+        width: Math.round(data.width),
+        height: Math.round(data.height),
+      })
+    }
+  })
+
+  ipcMain.handle("get-window-position", () => {
+    if (mainWindow) {
+      const bounds = mainWindow.getBounds()
+      return { x: bounds.x, y: bounds.y }
+    }
+    return { x: 0, y: 0 }
+  })
+
+  ipcMain.on("set-ignore-mouse-events", (_event, ignore: boolean) => {
+    if (mainWindow) {
+      mainWindow.setIgnoreMouseEvents(ignore, { forward: true })
+    }
+  })
+
   ipcMain.on("permission-reply", (_event, data: { requestID: string; reply: string }) => {
     log(`[electron:ipc] Permission reply from renderer: ${data.requestID} → ${data.reply}`)
     if (process.send) {

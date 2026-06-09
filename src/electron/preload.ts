@@ -5,6 +5,13 @@ contextBridge.exposeInMainWorld("petApi", {
 
   dragWindow: (x: number, y: number) => ipcRenderer.send("window-move", { x, y }),
 
+  resizeWindow: (width: number, height: number) => ipcRenderer.send("window-resize", { width, height }),
+
+  setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.send("set-ignore-mouse-events", ignore),
+
+  getWindowPosition: (): Promise<{ x: number; y: number }> =>
+    ipcRenderer.invoke("get-window-position"),
+
   onEvent: (callback: (event: any) => void) => {
     ipcRenderer.on("sse-event", (_event, data) => callback(data))
   },

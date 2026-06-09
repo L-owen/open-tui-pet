@@ -61,5 +61,13 @@ export const SLEEP_CHECK_INTERVAL = 30_000
 /** Debounce interval for saving window position (ms) */
 export const POSITION_SAVE_DEBOUNCE_MS = 500
 
+/** Minimum window size for resize */
+export const WINDOW_MIN_WIDTH = 160
+export const WINDOW_MIN_HEIGHT = 224
+
+/** Maximum window size for resize */
+export const WINDOW_MAX_WIDTH = 400
+export const WINDOW_MAX_HEIGHT = 560
+
 /** Tray icon (16x16 transparent PNG) */
 export const TRAY_ICON_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVQ4T2NkoBAwUqifYdAY8B8I/v9ngOwCZWJkZPzPwMDwn5GRsQ9IAsQZGRn/MDIy/gcJgA0gZPzPwMDwn5GR8T8jI+OfoZrKlGZkZPzPyMj4n5GR8T8jI+N/BkoYgI0F8n8ZKgYgZ2Rk/M/IyPgfkZEBAP6FZ2RkZPzPyMhIJmRkZPwDABwWFkYpF7FnAAAAAElFTkSuQmCC"

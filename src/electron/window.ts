@@ -1,7 +1,7 @@
 import { screen, BrowserWindow, app } from "electron"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
-import { WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_MARGIN, POSITION_SAVE_DEBOUNCE_MS } from "../constants.js"
+import { WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_MARGIN, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, WINDOW_MAX_WIDTH, WINDOW_MAX_HEIGHT, POSITION_SAVE_DEBOUNCE_MS } from "../constants.js"
 import { log } from "../logger.js"
 import { readConfig, saveConfig } from "../config.js"
 
@@ -48,18 +48,25 @@ export function createWindow(
     }
   }
 
-  log(`[electron] Creating window at (${x}, ${y}), screen: ${screenWidth}x${screenHeight}`)
+  const winWidth = config.windowWidth ?? WINDOW_WIDTH
+  const winHeight = config.windowHeight ?? WINDOW_HEIGHT
+
+  log(`[electron] Creating window at (${x}, ${y}), screen: ${screenWidth}x${screenHeight}, size: ${winWidth}x${winHeight}`)
 
   mainWindow = new BrowserWindow({
-    width: WINDOW_WIDTH,
-    height: WINDOW_HEIGHT,
+    width: winWidth,
+    height: winHeight,
+    minWidth: WINDOW_MIN_WIDTH,
+    minHeight: WINDOW_MIN_HEIGHT,
+    maxWidth: WINDOW_MAX_WIDTH,
+    maxHeight: WINDOW_MAX_HEIGHT,
     x,
     y,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false,
+    resizable: true,
     hasShadow: false,
     webPreferences: {
       preload: join(__dirname, "preload.js"),
@@ -101,13 +108,17 @@ export function createWindow(
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
       if (!mainWindow) return
-      const { x, y } = mainWindow.getBounds()
+      const bounds = mainWindow.getBounds()
       const config = readConfig()
-      config.windowX = x
-      config.windowY = y
+      config.windowX = bounds.x
+      config.windowY = bounds.y
+      config.windowWidth = bounds.width
+      config.windowHeight = bounds.height
       saveConfig(config)
     }, POSITION_SAVE_DEBOUNCE_MS)
   })
+
+  mainWindow.setIgnoreMouseEvents(true, { forward: true })
 
   if (process.platform === "darwin") {
     app.dock?.hide()

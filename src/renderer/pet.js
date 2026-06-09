@@ -9,6 +9,10 @@ const DOUBLE_CLICK_MS = 300
 const LONG_PRESS_MS = 600
 const MOVE_THRESHOLD_PX = 5
 const CLICK_RETURN_MS = 3000
+const MAX_WIDTH = 400
+const MAX_HEIGHT = 560
+const MIN_WIDTH = 160
+const MIN_HEIGHT = 224
 
 const CUTE_MESSAGES = ['Hi! 👋', '别戳我~', '摸摸头~', 'Hello!', '嘿嘿~']
 const EXCITED_MESSAGES = ['Woo!', '太开心!', 'Yay!', '蹦蹦跳~', 'Yeah!']
@@ -38,11 +42,88 @@ function init() {
     }
   })
 
+  let currentZoom = 1
+  const petContainer = document.getElementById('pet-container')
+  const resizeHandle = document.getElementById('resize-handle')
+  const permissionPopupEl = document.getElementById('permission-popup')
+
+  const interactiveEls = [petSprite, noPetMessage, permissionPopupEl]
+  let clickThrough = true
+  let isResizing = false
+  document.addEventListener('mousemove', (e) => {
+    if (isResizing) {
+      if (clickThrough) {
+        clickThrough = false
+        window.petApi.setIgnoreMouseEvents(false)
+      }
+      return
+    }
+    let overInteractive = false
+    for (const el of interactiveEls) {
+      const rect = el.getBoundingClientRect()
+      if (e.clientX >= rect.left && e.clientX <= rect.right &&
+          e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        overInteractive = true
+        break
+      }
+    }
+    if (!overInteractive) {
+      const hr = resizeHandle.getBoundingClientRect()
+      const pad = 50 * currentZoom
+      if (e.clientX >= hr.left - pad && e.clientX <= hr.right + pad &&
+          e.clientY >= hr.top - pad && e.clientY <= hr.bottom + pad) {
+        overInteractive = true
+      }
+    }
+    if (overInteractive && clickThrough) {
+      clickThrough = false
+      window.petApi.setIgnoreMouseEvents(false)
+    } else if (!overInteractive && !clickThrough) {
+      clickThrough = true
+      window.petApi.setIgnoreMouseEvents(true)
+    }
+  })
+
+  function updateScale() {
+    currentZoom = window.innerWidth / 200
+    document.documentElement.style.fontSize = (currentZoom * 100) + '%'
+    updateHandlePosition()
+  }
+
+  function updateHandlePosition() {
+    const petRightPct = (petSprite.offsetLeft + petSprite.offsetWidth) / petContainer.clientWidth * 100
+    const petBottomPct = (petSprite.offsetTop + petSprite.offsetHeight) / petContainer.clientHeight * 100
+    const gap = 1 + currentZoom * currentZoom
+    resizeHandle.style.left = `calc(${petRightPct}% + ${gap}px)`
+    resizeHandle.style.top = `calc(${petBottomPct}% + ${gap}px)`
+  }
+
+  let resizeHandleVisible = false
+  function checkResizeHover(e) {
+    if (resizeHandle.classList.contains('dragging')) return
+    const handleRect = resizeHandle.getBoundingClientRect()
+    const hx = handleRect.left + handleRect.width / 2
+    const hy = handleRect.top + handleRect.height / 2
+    const dx = e.clientX - hx
+    const dy = e.clientY - hy
+    const nearHandle = Math.sqrt(dx * dx + dy * dy) < 50 * currentZoom
+    if (nearHandle !== resizeHandleVisible) {
+      resizeHandleVisible = nearHandle
+      resizeHandle.classList.toggle('near', nearHandle)
+    }
+  }
+  document.addEventListener('mousemove', checkResizeHover)
+  document.addEventListener('mouseleave', () => {
+    resizeHandleVisible = false
+    resizeHandle.classList.remove('near')
+  })
+
   window.petApi.onPetData((data) => {
     player.setLoaded(true)
     petSprite.style.backgroundImage = `url('${data.spriteDataUrl}')`
     petSprite.style.display = 'block'
     noPetMessage.style.display = 'none'
+    updateScale()
     player.play('idle')
     timeAware.showGreeting()
     timeAware.startPeriodicReminders()
@@ -76,6 +157,10 @@ function init() {
     timeAware.stopPeriodicReminders()
   })
 
+  window.addEventListener('resize', () => {
+    updateScale()
+  })
+
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       timeAware.stopPeriodicReminders()
@@ -103,21 +188,29 @@ function init() {
     }, CLICK_RETURN_MS)
   }
 
-  // Container-level drag (for dragging the window from non-interactive areas)
-  const petContainer = document.getElementById('pet-container')
-  petContainer.addEventListener('mousedown', (e) => {
-    // Skip if click is on interactive elements
-    if (e.target.closest('.pet-sprite, .permission-popup, .no-pet-message')) return
-
+  resizeHandle.addEventListener('mousedown', (e) => {
+    e.stopPropagation()
+    isResizing = true
+    resizeHandle.classList.add('dragging')
+    document.documentElement.classList.add('resizing')
+    if (clickThrough) {
+      clickThrough = false
+      window.petApi.setIgnoreMouseEvents(false)
+    }
     const startX = e.screenX
     const startY = e.screenY
-    const startWinX = window.screenX
-    const startWinY = window.screenY
+    const startW = window.innerWidth
+    const startH = window.innerHeight
 
     const onMove = (e) => {
-      window.petApi.dragWindow(startWinX + (e.screenX - startX), startWinY + (e.screenY - startY))
+      const newW = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startW + (e.screenX - startX)))
+      const newH = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, startH + (e.screenY - startY)))
+      window.petApi.resizeWindow(newW, newH)
     }
     const onUp = () => {
+      isResizing = false
+      resizeHandle.classList.remove('dragging')
+      document.documentElement.classList.remove('resizing')
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
     }
@@ -126,15 +219,16 @@ function init() {
   })
 
   // Sprite-level interaction: tap (single/double/long-press) AND drag
-  petSprite.addEventListener('mousedown', (e) => {
+  petSprite.addEventListener('mousedown', async (e) => {
     if (e.button !== 0) return
     longPressFired = false
     isDragging = false
     mouseDownPos = { x: e.clientX, y: e.clientY }
     const startScreenX = e.screenX
     const startScreenY = e.screenY
-    const startWinX = window.screenX
-    const startWinY = window.screenY
+    const winPos = await window.petApi.getWindowPosition()
+    const startWinX = winPos.x
+    const startWinY = winPos.y
 
     longPressTimer = setTimeout(() => {
       longPressTimer = null

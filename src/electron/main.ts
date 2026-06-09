@@ -8,7 +8,7 @@ import { createTray, rebuildMenus, buildPetSubmenu } from "./tray.js"
 import { setupIpc, listenForParentEvents, watchParent } from "./ipc.js"
 import { loadPetData } from "./pet-loader.js"
 import { readGitLog } from "./git-reader.js"
-import { saveConfig } from "../config.js"
+import { readConfig, saveConfig } from "../config.js"
 import { log } from "../logger.js"
 import { STANDUP_WINDOW_WIDTH, STANDUP_WINDOW_HEIGHT } from "../constants.js"
 import type { PetInfo } from "../types.js"
@@ -77,7 +77,9 @@ function switchPet(slug: string) {
   if (slug === selectedSlug) return
   if (!ALL_PETS.find(p => p.slug === slug)) { log(`[electron] Pet not found: ${slug}`); return }
   selectedSlug = slug
-  saveConfig({ selectedPet: slug })
+  const config = readConfig()
+  config.selectedPet = slug
+  saveConfig(config)
   log(`[electron] Switched to pet: ${slug}`)
   sendPetData(slug)
   if (tray) rebuildMenus(tray, getMainWindow(), ALL_PETS, selectedSlug, openStandupWindow)
